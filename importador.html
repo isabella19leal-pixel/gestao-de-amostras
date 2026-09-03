@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão de Amostras Sond — Importador</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<style>
+  :root {
+    --ink:        #17191B;
+    --panel:      #1F2226;
+    --panel-2:    #24282D;
+    --line:       #33383D;
+    --stone:      #C9C2B4;
+    --stone-dim:  #8B8A82;
+    --clay:       #B5652D;
+    --clay-dim:   #8C4F24;
+    --core-green: #5C7A5E;
+    --warn-amber: #C9A227;
+    --alert-brick:#A6453B;
+    --radius: 3px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--ink);
+    color: var(--stone);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .mono {
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  a { color: var(--clay); }
+
+  ::selection { background: var(--clay-dim); color: var(--stone); }
+
+  :focus-visible {
+    outline: 2px solid var(--clay);
+    outline-offset: 2px;
+  }
+
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 40px 24px 96px;
+  }
+
+  /* ---------- Header ---------- */
+  header.masthead {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .masthead .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--stone-dim);
+    margin: 0 0 6px;
+  }
+
+  .masthead h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .session-box {
+    text-align: right;
+    font-size: 13px;
+    color: var(--stone-dim);
+  }
+
+  .session-box .who {
+    color: var(--stone);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+
+  .session-box .perfil-tag {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 6px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--clay);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+  }
+
+  .link-btn {
+    background: none;
+    border: none;
+    color: var(--stone-dim);
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    padding: 0;
+    margin-top: 4px;
+  }
+  .link-btn:hover { color: var(--stone); }
+
+  /* ---------- Seções numeradas ---------- */
+  section.step {
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+    margin-top: 28px;
+  }
+
+  section.step .step-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--stone-dim);
+    margin: 0 0 14px;
+  }
+
+  section.step .step-label b { color: var(--stone); }
+
+  section.step.is-disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  /* ---------- Login ---------- */
+  .login-panel {
+    max-width: 360px;
+    margin: 64px auto;
+    padding: 28px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+  }
+
+  .login-panel h2 {
+    font-size: 17px;
+    margin: 0 0 4px;
+  }
+
+  .login-panel p.hint {
+    color: var(--stone-dim);
+    font-size: 13px;
+    margin: 0 0 20px;
+  }
+
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--stone-dim);
+    margin-bottom: 4px;
+  }
+
+  input[type="email"],
+  input[type="password"] {
+    width: 100%;
+    background: var(--ink);
+    border: 1px solid var(--line);
+    color: var(--stone);
+    padding: 9px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+  }
+
+  input:focus { border-color: var(--clay); }
+
+  button.primary {
+    background: var(--clay);
+    color: #17191B;
+    border: none;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 10px 18px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    width: 100%;
+  }
+  button.primary:hover { background: #C77339; }
+  button.primary:disabled {
+    background: var(--panel-2);
+    color: var(--stone-dim);
+    cursor: not-allowed;
+  }
+
+  .error-msg {
+    color: var(--alert-brick);
+    font-size: 13px;
+    margin: -6px 0 14px;
+  }
+
+  /* ---------- Dropzone ---------- */
+  .dropzone {
+    border: 1px dashed var(--line);
+    padding: 36px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    border-color: var(--clay);
+    background: rgba(181, 101, 45, 0.06);
+  }
+
+  .dropzone .core-bars {
+    display: flex;
+    justify-content: center;
+    gap: 3px;
+    margin-bottom: 14px;
+  }
+  .dropzone .core-bars span {
+    display: block;
+    width: 6px;
+    height: 28px;
+    background: var(--line);
+  }
+  .dropzone:hover .core-bars span,
+  .dropzone.dragover .core-bars span { background: var(--clay-dim); }
+
+  .dropzone .main-txt { font-size: 14px; margin: 0 0 4px; }
+  .dropzone .sub-txt { font-size: 12px; color: var(--stone-dim); margin: 0; }
+
+  .file-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--clay);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    margin-top: 12px;
+  }
+
+  /* ---------- Métricas ---------- */
+  .metric-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    margin-bottom: 16px;
+  }
+  .metric {
+    background: var(--panel);
+    padding: 14px 16px;
+  }
+  .metric .num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 24px;
+    font-weight: 500;
+    display: block;
+  }
+  .metric .lbl {
+    font-size: 11px;
+    color: var(--stone-dim);
+    letter-spacing: 0.03em;
+    margin-top: 2px;
+  }
+  .metric.ok .num { color: var(--core-green); }
+  .metric.warn .num { color: var(--warn-amber); }
+  .metric.bad .num { color: var(--alert-brick); }
+
+  @media (max-width: 560px) {
+    .metric-row { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ---------- Tabela de detalhes ---------- */
+  details.detail-box {
+    margin-bottom: 16px;
+    border: 1px solid var(--line);
+  }
+  details.detail-box summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--stone-dim);
+    list-style: none;
+  }
+  details.detail-box summary::-webkit-details-marker { display: none; }
+  details.detail-box summary:before { content: "▸ "; }
+  details.detail-box[open] summary:before { content: "▾ "; }
+
+  table.log-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  table.log-table th, table.log-table td {
+    text-align: left;
+    padding: 6px 14px;
+    border-top: 1px solid var(--line);
+  }
+  table.log-table th {
+    color: var(--stone-dim);
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+  }
+  table.log-table td.code { font-family: 'IBM Plex Mono', monospace; }
+  table.log-table td.reason.err { color: var(--alert-brick); }
+  table.log-table td.reason.dup { color: var(--warn-amber); }
+
+  /* ---------- Botões secundários ---------- */
+  button.secondary {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--stone);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    padding: 9px 16px;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  button.secondary:hover { border-color: var(--stone-dim); }
+
+  /* ---------- Barra de progresso ---------- */
+  .progress-track {
+    background: var(--panel-2);
+    height: 8px;
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 14px 0 8px;
+  }
+  .progress-fill {
+    background: var(--clay);
+    height: 100%;
+    width: 0%;
+    transition: width 0.2s ease;
+  }
+  .progress-txt {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--stone-dim);
+  }
+
+  /* ---------- Importações recentes ---------- */
+  .import-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    flex-wrap: wrap;
+  }
+  .import-row .fname { color: var(--stone); }
+  .import-row .meta { color: var(--stone-dim); font-size: 12px; }
+  .import-row .counts {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--stone-dim);
+    white-space: nowrap;
+  }
+
+  .empty-note {
+    color: var(--stone-dim);
+    font-size: 13px;
+    font-style: normal;
+  }
+
+  .banner {
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--stone-dim);
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .banner.info { border-left-color: var(--clay); }
+  .banner.error { border-left-color: var(--alert-brick); color: var(--alert-brick); }
+  .banner.success { border-left-color: var(--core-green); }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- =================================================================
+     TELA DE LOGIN
+================================================================== -->
+<div id="loginView">
+  <div class="wrap">
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">GESTÃO DE AMOSTRAS · SOND</p>
+        <h1>Importador de planilhas</h1>
+      </div>
+    </header>
+
+    <div class="login-panel">
+      <h2>Entrar</h2>
+      <p class="hint">Use seu e-mail e senha cadastrados no Supabase.</p>
+
+      <form id="loginForm">
+        <label for="loginEmail">E-mail</label>
+        <input type="email" id="loginEmail" required autocomplete="username">
+
+        <label for="loginPassword">Senha</label>
+        <input type="password" id="loginPassword" required autocomplete="current-password">
+
+        <p class="error-msg" id="loginError" hidden></p>
+
+        <button type="submit" class="primary" id="loginBtn">Entrar</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================================
+     APP PRINCIPAL (após login)
+================================================================== -->
+<div id="appView" hidden>
+  <div class="wrap">
+
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">GESTÃO DE AMOSTRAS · SOND</p>
+        <h1>Importador de planilhas</h1>
+      </div>
+      <div class="session-box">
+        <div><span class="who" id="sessionEmail"></span><span class="perfil-tag" id="sessionPerfil"></span></div>
+        <button class="link-btn" id="logoutBtn">Sair</button>
+      </div>
+    </header>
+
+    <!-- Aviso de perfil sem permissão -->
+    <div class="banner error" id="semPerfilBanner" hidden>
+      Seu usuário não possui um perfil vinculado em <span class="mono">usuarios_perfis</span>,
+      ou não tem permissão de importação. Peça para um ADMIN cadastrar seu perfil
+      (veja instruções da Etapa 1).
+    </div>
+
+    <!-- ===================== 01 IMPORTAÇÃO ===================== -->
+    <section class="step" id="stepUpload">
+      <p class="step-label"><b>01</b> · IMPORTAÇÃO</p>
+
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Selecionar arquivo Excel">
+        <div class="core-bars"><span></span><span></span><span></span><span></span><span></span></div>
+        <p class="main-txt">Arraste a planilha da Sond aqui, ou clique para selecionar</p>
+        <p class="sub-txt">Arquivo .xlsx exportado da Sond (Ordem de Serviço, Código Amostra, etc.)</p>
+      </div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" hidden>
+
+      <div class="file-chip" id="fileChip" hidden>
+        <span class="mono" id="fileChipName"></span>
+        <button class="link-btn" id="fileChipClear">remover</button>
+      </div>
+
+      <p class="error-msg" id="parseError" hidden></p>
+    </section>
+
+    <!-- ===================== 02 VALIDAÇÃO ===================== -->
+    <section class="step is-disabled" id="stepValidate">
+      <p class="step-label"><b>02</b> · VALIDAÇÃO</p>
+
+      <div class="metric-row">
+        <div class="metric"><span class="num mono" id="mTotal">—</span><span class="lbl">linhas no arquivo</span></div>
+        <div class="metric ok"><span class="num mono" id="mValidas">—</span><span class="lbl">prontas para importar</span></div>
+        <div class="metric warn"><span class="num mono" id="mDuplicadas">—</span><span class="lbl">duplicadas no arquivo</span></div>
+        <div class="metric bad"><span class="num mono" id="mErros">—</span><span class="lbl">com erro</span></div>
+      </div>
+
+      <details class="detail-box" id="detailBox" hidden>
+        <summary>Ver linhas com erro ou duplicadas</summary>
+        <table class="log-table">
+          <thead><tr><th>Linha</th><th>Código Amostra</th><th>Motivo</th></tr></thead>
+          <tbody id="detailTableBody"></tbody>
+        </table>
+      </details>
+    </section>
+
+    <!-- ===================== 03 CONFIRMAÇÃO ===================== -->
+    <section class="step is-disabled" id="stepConfirm">
+      <p class="step-label"><b>03</b> · CONFIRMAÇÃO</p>
+      <p style="color:var(--stone-dim); font-size: 13px;">
+        A importação atualiza somente os campos originais da Sond
+        (OS, identificação, status, datas de coleta etc.). Nenhum dado de
+        gestão já preenchido no dashboard — base, frete, status logístico,
+        observações — será apagado ou sobrescrito.
+      </p>
+      <div style="display:flex; gap:10px; margin-top:10px;">
+        <button class="primary" id="confirmBtn" style="width:auto;">Confirmar importação</button>
+        <button class="secondary" id="cancelBtn">Cancelar</button>
+      </div>
+    </section>
+
+    <!-- ===================== 04 RESULTADO ===================== -->
+    <section class="step is-disabled" id="stepResult">
+      <p class="step-label"><b>04</b> · RESULTADO</p>
+
+      <div id="progressBox" hidden>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <p class="progress-txt" id="progressTxt">Processando lote 0 de 0…</p>
+      </div>
+
+      <div id="resultBox" hidden>
+        <div class="metric-row">
+          <div class="metric ok"><span class="num mono" id="rNovos">—</span><span class="lbl">novos</span></div>
+          <div class="metric"><span class="num mono" id="rAtualizados">—</span><span class="lbl">atualizados</span></div>
+          <div class="metric warn"><span class="num mono" id="rDuplicados">—</span><span class="lbl">duplicados</span></div>
+          <div class="metric bad"><span class="num mono" id="rErros">—</span><span class="lbl">erros</span></div>
+        </div>
+        <button class="secondary" id="novaImportacaoBtn">Importar outro arquivo</button>
+      </div>
+    </section>
+
+    <!-- ===================== IMPORTAÇÕES RECENTES ===================== -->
+    <section class="step" id="stepHistorico">
+      <p class="step-label"><b>·</b> IMPORTAÇÕES RECENTES</p>
+      <div id="historicoList"><p class="empty-note">Carregando…</p></div>
+    </section>
+
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
