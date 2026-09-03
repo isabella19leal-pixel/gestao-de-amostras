@@ -17,5 +17,5 @@
 //   de RLS configuradas no banco (Etapa 1).
 // =====================================================================
 
-const SUPABASE_URL = "COLE_AQUI_A_URL_DO_SEU_PROJETO";
-const SUPABASE_ANON_KEY = "COLE_AQUI_A_CHAVE_ANON_PUBLIC";
+const SUPABASE_URL = "Supabase → Project Settings → API → Project URL";
+const SUPABASE_ANON_KEY = "anon/public (mesmo lugar, campo 'anon public')";
