@@ -38,7 +38,7 @@ const CAMPOS_OBRIGATORIOS = ["codigo_amostra", "ordem_servico", "identificacao"]
 // ---------------------------------------------------------------------
 // Supabase client
 // ---------------------------------------------------------------------
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let currentUser = null;
 let currentPerfil = null;
@@ -66,7 +66,7 @@ $("loginForm").addEventListener("submit", async (e) => {
   const email = $("loginEmail").value.trim();
   const password = $("loginPassword").value;
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
   $("loginBtn").disabled = false;
   $("loginBtn").textContent = "Entrar";
@@ -81,7 +81,7 @@ $("loginForm").addEventListener("submit", async (e) => {
 });
 
 $("logoutBtn").addEventListener("click", async () => {
-  await supabase.auth.signOut();
+  await supabaseClient.auth.signOut();
   location.reload();
 });
 
@@ -89,7 +89,7 @@ async function onLoggedIn(user) {
   currentUser = user;
 
   // Busca o perfil vinculado a este usuário (criado na Etapa 1).
-  const { data: perfilRow, error } = await supabase
+  const { data: perfilRow, error } = await supabaseClient
     .from("usuarios_perfis")
     .select("perfil, nome, ativo")
     .eq("id", user.id)
@@ -129,7 +129,7 @@ async function onLoggedIn(user) {
 }
 
 // Se já existir uma sessão ativa (ex.: página recarregada), reaproveita.
-supabase.auth.getSession().then(({ data }) => {
+supabaseClient.auth.getSession().then(({ data }) => {
   if (data.session) {
     onLoggedIn(data.session.user);
   }
@@ -412,7 +412,7 @@ async function executarImportacao() {
   const errosDeLeitura = problemRows.filter((p) => p.tipo === "erro").length;
 
   // 1) Cria o registro da importação (fica com status "em andamento").
-  const { data: importacao, error: erroImportacao } = await supabase
+  const { data: importacao, error: erroImportacao } = await supabaseClient
     .from("importacoes")
     .insert({
       nome_arquivo: currentFileName,
@@ -451,7 +451,7 @@ async function executarImportacao() {
     try {
       // Descobre quais códigos já existem ANTES do upsert, para poder
       // contar corretamente novos x atualizados.
-      const { data: existentes, error: erroSelect } = await supabase
+      const { data: existentes, error: erroSelect } = await supabaseClient
         .from("amostras")
         .select("codigo_amostra")
         .in("codigo_amostra", codigos);
@@ -482,7 +482,7 @@ async function executarImportacao() {
         ultima_importacao_id: importacaoId,
       }));
 
-      const { error: erroUpsert } = await supabase
+      const { error: erroUpsert } = await supabaseClient
         .from("amostras")
         .upsert(payload, { onConflict: "codigo_amostra" });
 
@@ -503,7 +503,7 @@ async function executarImportacao() {
   const totalErros = errosDeLeitura + errosUpsert;
 
   // 2) Atualiza o registro da importação com os números finais.
-  await supabase
+  await supabaseClient
     .from("importacoes")
     .update({
       registros_novos: novos,
@@ -533,7 +533,7 @@ $("novaImportacaoBtn").addEventListener("click", resetImportador);
 
 async function carregarImportacoesRecentes() {
   const container = $("historicoList");
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from("importacoes")
     .select("nome_arquivo, data_importacao, total_registros, registros_novos, registros_atualizados, duplicados, erros")
     .order("data_importacao", { ascending: false })
