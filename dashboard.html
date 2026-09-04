@@ -231,7 +231,8 @@
       </div>
       <div class="session-box">
         <div><span class="who" id="sessionEmail"></span><span class="perfil-tag" id="sessionPerfil"></span></div>
-        <button class="link-btn" id="importadorLink" onclick="location.href='importador.html'">Ir para importador</button>
+        <button class="link-btn" onclick="location.href='cadastros.html'">Cadastros</button>
+        <button class="link-btn" id="importadorLink" onclick="location.href='importador.html'">Importador</button>
         <button class="link-btn" id="logoutBtn">Sair</button>
       </div>
     </header>
@@ -289,7 +290,8 @@
         </p>
 
         <div class="filters-row">
-          <input type="text" id="fBusca" placeholder="Buscar por código, OS ou cliente…">
+          <input type="text" id="fOS" placeholder="Filtrar por Ordem de Serviço…" style="max-width:220px;">
+          <input type="text" id="fBusca" placeholder="Buscar por código ou cliente…">
           <select id="fBase"><option value="">Todas as bases</option></select>
           <select id="fStatus"><option value="">Todos os status</option></select>
         </div>
@@ -298,9 +300,10 @@
           <table class="data-table">
             <thead>
               <tr>
+                <th>OS</th>
                 <th>Código</th>
                 <th>Cliente</th>
-                <th>OS / ST</th>
+                <th>ST</th>
                 <th>Sondador</th>
                 <th>Base atual</th>
                 <th>Status</th>
