@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão de Amostras Sond — Dashboard</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root {
+    --ink:        #17191B;
+    --panel:      #1F2226;
+    --panel-2:    #24282D;
+    --line:       #33383D;
+    --stone:      #C9C2B4;
+    --stone-dim:  #8B8A82;
+    --clay:       #B5652D;
+    --clay-dim:   #8C4F24;
+    --core-green: #5C7A5E;
+    --warn-amber: #C9A227;
+    --alert-brick:#A6453B;
+    --radius: 3px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--ink);
+    color: var(--stone);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  a { color: var(--clay); }
+  ::selection { background: var(--clay-dim); color: var(--stone); }
+  :focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 40px 24px 96px;
+  }
+
+  header.masthead {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .masthead .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; letter-spacing: 0.04em;
+    color: var(--stone-dim); margin: 0 0 6px;
+  }
+  .masthead h1 { font-size: 22px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  .session-box { text-align: right; font-size: 13px; color: var(--stone-dim); }
+  .session-box .who { color: var(--stone); font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
+  .session-box .perfil-tag {
+    display: inline-block; margin-left: 8px; padding: 1px 6px;
+    border: 1px solid var(--line); border-left: 3px solid var(--clay);
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.03em;
+  }
+  .link-btn {
+    background: none; border: none; color: var(--stone-dim);
+    text-decoration: underline; cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif; font-size: 13px;
+    padding: 0; margin-top: 4px; margin-right: 14px;
+  }
+  .link-btn:hover { color: var(--stone); }
+
+  section.block {
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+    margin-top: 28px;
+  }
+  section.block .block-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; letter-spacing: 0.06em;
+    color: var(--stone-dim); margin: 0 0 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+
+  /* ---------- Resumo executivo ---------- */
+  .hero-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .hero-metric { background: var(--panel); padding: 20px; }
+  .hero-metric .num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 32px; font-weight: 500; display: block;
+  }
+  .hero-metric .lbl { font-size: 12px; color: var(--stone-dim); margin-top: 4px; }
+  .hero-metric.ok .num { color: var(--core-green); }
+  .hero-metric.warn .num { color: var(--warn-amber); }
+  .hero-metric.info .num { color: var(--clay); }
+
+  .sub-row {
+    display: flex; gap: 24px; flex-wrap: wrap;
+    margin-top: 12px; padding: 14px 16px;
+    background: var(--panel-2); border: 1px solid var(--line);
+    font-size: 13px; color: var(--stone-dim);
+  }
+  .sub-row b { color: var(--stone); font-family: 'IBM Plex Mono', monospace; }
+
+  @media (max-width: 700px) {
+    .hero-row { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ---------- Listas tipo cartão/manifesto ---------- */
+  .card-list { display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .card-row {
+    background: var(--panel); padding: 12px 16px;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .card-row .name { font-size: 14px; }
+  .card-row .meta { font-size: 12px; color: var(--stone-dim); }
+  .card-row .count { font-family: 'IBM Plex Mono', monospace; font-size: 15px; }
+  .card-row .count.warn { color: var(--warn-amber); }
+  .card-row .count.bad { color: var(--alert-brick); }
+
+  .empty-note { color: var(--stone-dim); font-size: 13px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); }
+
+  /* ---------- Tabela de amostras ---------- */
+  .filters-row {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .filters-row input, .filters-row select {
+    background: var(--panel); border: 1px solid var(--line); color: var(--stone);
+    padding: 8px 10px; font-family: 'Space Grotesk', sans-serif; font-size: 13px;
+    border-radius: var(--radius);
+  }
+  .filters-row input { flex: 1; min-width: 180px; }
+  .filters-row input:focus, .filters-row select:focus { border-color: var(--clay); }
+
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); }
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+  table.data-table th, table.data-table td {
+    text-align: left; padding: 8px 12px; border-top: 1px solid var(--line); white-space: nowrap;
+  }
+  table.data-table thead th {
+    background: var(--panel-2); color: var(--stone-dim);
+    font-weight: 500; font-size: 11px; letter-spacing: 0.02em;
+    position: sticky; top: 0;
+  }
+  table.data-table tbody tr:hover { background: rgba(181,101,45,0.05); }
+  table.data-table td.code { font-family: 'IBM Plex Mono', monospace; }
+
+  .status-tag {
+    display: inline-block; padding: 2px 7px;
+    border-left: 3px solid var(--stone-dim);
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    background: var(--panel-2);
+  }
+  .status-tag.st-coletada, .status-tag.st-na_base { border-left-color: var(--stone-dim); }
+  .status-tag.st-aguardando_frete, .status-tag.st-frete_contratado { border-left-color: var(--warn-amber); }
+  .status-tag.st-em_transito { border-left-color: var(--clay); }
+  .status-tag.st-chegou_sao_pedro, .status-tag.st-recebida, .status-tag.st-em_ensaio, .status-tag.st-ensaiada { border-left-color: var(--core-green); }
+
+  .pagination {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 12px; font-size: 13px; color: var(--stone-dim);
+  }
+  .pagination button {
+    background: none; border: 1px solid var(--line); color: var(--stone);
+    padding: 6px 12px; border-radius: var(--radius); cursor: pointer; font-size: 13px;
+  }
+  .pagination button:hover:not(:disabled) { border-color: var(--stone-dim); }
+  .pagination button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .loading-note { color: var(--stone-dim); font-size: 13px; padding: 20px 0; }
+  .banner {
+    padding: 10px 14px; border: 1px solid var(--line); border-left: 3px solid var(--alert-brick);
+    color: var(--alert-brick); font-size: 13px; margin-bottom: 16px;
+  }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="loginView">
+  <div class="wrap">
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">GESTÃO DE AMOSTRAS · SOND</p>
+        <h1>Dashboard</h1>
+      </div>
+    </header>
+    <div style="max-width:360px;margin:64px auto;padding:28px;background:var(--panel);border:1px solid var(--line);">
+      <h2 style="font-size:17px;margin:0 0 4px;">Entrar</h2>
+      <p style="color:var(--stone-dim);font-size:13px;margin:0 0 20px;">Use seu e-mail e senha cadastrados no Supabase.</p>
+      <form id="loginForm">
+        <label style="display:block;font-size:12px;color:var(--stone-dim);margin-bottom:4px;" for="loginEmail">E-mail</label>
+        <input type="email" id="loginEmail" required autocomplete="username"
+          style="width:100%;background:var(--ink);border:1px solid var(--line);color:var(--stone);padding:9px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;border-radius:3px;margin-bottom:14px;">
+        <label style="display:block;font-size:12px;color:var(--stone-dim);margin-bottom:4px;" for="loginPassword">Senha</label>
+        <input type="password" id="loginPassword" required autocomplete="current-password"
+          style="width:100%;background:var(--ink);border:1px solid var(--line);color:var(--stone);padding:9px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;border-radius:3px;margin-bottom:14px;">
+        <p class="banner" id="loginError" hidden></p>
+        <button type="submit" id="loginBtn"
+          style="background:var(--clay);color:#17191B;border:none;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;padding:10px 18px;border-radius:3px;cursor:pointer;width:100%;">Entrar</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="appView" hidden>
+  <div class="wrap">
+
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">GESTÃO DE AMOSTRAS · SOND</p>
+        <h1>Dashboard — Visão Geral</h1>
+      </div>
+      <div class="session-box">
+        <div><span class="who" id="sessionEmail"></span><span class="perfil-tag" id="sessionPerfil"></span></div>
+        <button class="link-btn" id="importadorLink" onclick="location.href='importador.html'">Ir para importador</button>
+        <button class="link-btn" id="logoutBtn">Sair</button>
+      </div>
+    </header>
+
+    <div id="loadingNote" class="loading-note">Carregando dados…</div>
+    <div id="errorBanner" class="banner" hidden></div>
+
+    <div id="dashboardContent" hidden>
+
+      <!-- ===================== RESUMO EXECUTIVO ===================== -->
+      <section class="block" style="border-top:none; margin-top:0; padding-top:0;">
+        <div class="hero-row">
+          <div class="hero-metric"><span class="num mono" id="hTotal">—</span><span class="lbl">amostras coletadas</span></div>
+          <div class="hero-metric warn"><span class="num mono" id="hAguardando">—</span><span class="lbl">aguardando transporte</span></div>
+          <div class="hero-metric info"><span class="num mono" id="hTransito">—</span><span class="lbl">em trânsito</span></div>
+          <div class="hero-metric ok"><span class="num mono" id="hSaoPedro">—</span><span class="lbl">em São Pedro</span></div>
+        </div>
+        <div class="sub-row">
+          <div><b id="sBases">—</b> bases ativas</div>
+          <div><b id="sContratosSemBase">—</b> contratos sem base</div>
+          <div><b id="sOsSemContrato">—</b> OS sem contrato vinculado</div>
+          <div><b id="sFretes">—</b> fretes programados</div>
+        </div>
+      </section>
+
+      <!-- ===================== BASES ===================== -->
+      <section class="block">
+        <p class="block-label">BASES — QUANTIDADE DE AMOSTRAS</p>
+        <div class="card-list" id="basesList"></div>
+      </section>
+
+      <!-- ===================== CONTRATOS SEM BASE ===================== -->
+      <section class="block">
+        <p class="block-label">CONTRATOS SEM BASE VINCULADA</p>
+        <div class="card-list" id="contratosSemBaseList"></div>
+      </section>
+
+      <!-- ===================== OS SEM CONTRATO ===================== -->
+      <section class="block">
+        <p class="block-label">OS SEM CONTRATO VINCULADO</p>
+        <div class="card-list" id="osSemContratoList"></div>
+      </section>
+
+      <!-- ===================== FRETES PREVISTOS ===================== -->
+      <section class="block">
+        <p class="block-label">FRETES PREVISTOS</p>
+        <div class="card-list" id="fretesList"></div>
+      </section>
+
+      <!-- ===================== TABELA DE AMOSTRAS ===================== -->
+      <section class="block">
+        <p class="block-label">
+          AMOSTRAS
+          <span class="mono" id="tableCount" style="color:var(--stone-dim); font-size:11px;"></span>
+        </p>
+
+        <div class="filters-row">
+          <input type="text" id="fBusca" placeholder="Buscar por código, OS ou cliente…">
+          <select id="fBase"><option value="">Todas as bases</option></select>
+          <select id="fStatus"><option value="">Todos os status</option></select>
+        </div>
+
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Cliente</th>
+                <th>OS / ST</th>
+                <th>Sondador</th>
+                <th>Base atual</th>
+                <th>Status</th>
+                <th>Data coleta</th>
+                <th>Frete previsto</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <button id="prevPageBtn">← anterior</button>
+          <span id="pageInfo" class="mono"></span>
+          <button id="nextPageBtn">próxima →</button>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>
